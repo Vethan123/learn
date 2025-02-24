@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 
 const encryptionComponent = require("./routes/encryption");
 const decryptionComponent = require("./routes/decryption");
+const loginComponent = require("./routes/signup-login");
 
 
 require('dotenv').config();
@@ -18,6 +19,7 @@ mongoose.connect("mongodb://localhost:27017/", {
 .catch((err) => console.log(err));
 
 
+app.use("/auth", loginComponent);
 app.use("/encrypt", encryptionComponent);
 app.use("/decrypt", decryptionComponent);
 

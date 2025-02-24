@@ -74,8 +74,6 @@ router.post("/encrypt-text", async (req, res) => {
 });
 
 
-
-
 router.post("/replace-chars", async (req, res) => {
     let text = req.body.text;
 
