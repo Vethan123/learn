@@ -10,10 +10,10 @@ router.post("/send-message", async (req, res)=>{
     let {senderId, receiverId} = req.body;
 
     try{
-        let details = await signupDetails.findById(senderId, {'data.key' : 1, _id : 0})
+        let aesKey = await signupDetails.findById(senderId, {'data.key' : 1, _id : 0})
         let publicKey = await signupDetails.findById(receiverId,{publicKey : 1, _id : 0});
 
-        console.log("key : " + details.data[0].key);
+        console.log("key : " + aesKey.data[0].key);
         console.log("publicKey : " + publicKey.publicKey)
         
 
