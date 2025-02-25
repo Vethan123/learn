@@ -4,7 +4,7 @@ const router = express.Router();
 const {decrypt} = require("../controllers/decrypt");
 
 router.post("/decrypt-text", async (req, res) => {
-    let { encryptedText, newIndex } = req.body;
+    let {encryptedText, newIndex } = req.body;
 
     try {
         let modifiedText = encryptedText;

@@ -2,6 +2,8 @@ const express = require("express");
 const { PythonShell } = require('python-shell');
 const axios = require("axios");
 const {encryptText} = require("../controllers/encrypt");
+const signup = require("../models/signup");
+const crypto = require("crypto");
 
 const router = express.Router();
 
@@ -35,7 +37,7 @@ router.post("/detect-pii", async (req, res) => {
 });
 
 router.post("/encrypt-text", async (req, res) => {
-    let text = req.body.text;
+    let {id, receiverId, text} = req.body;
 
     try {
         const response = await axios.post('http://localhost:3000/encrypt/detect-pii', {
@@ -44,6 +46,9 @@ router.post("/encrypt-text", async (req, res) => {
 
         const entityEntries = Object.entries(response.data);
         entityEntries.sort((a, b) => a[1].start_index - b[1].start_index);
+
+        const key = crypto.randomBytes(32);
+        const hexKey = key.toString('hex');
 
         let modifiedText = text;
         let indexShift = 0;
@@ -56,13 +61,31 @@ router.post("/encrypt-text", async (req, res) => {
             end_index += indexShift;
 
             let plain_text = entityName;
-            let cipher_text = encryptText(plain_text, process.env.KEY);
+            let cipher_text = encryptText(plain_text, hexKey);
 
             newIndicesArray.push([start_index, start_index + cipher_text.length]);
 
             modifiedText = modifiedText.slice(0, start_index) + cipher_text + modifiedText.slice(end_index);
 
             indexShift += cipher_text.length - plain_text.length;
+        }
+        const updatedUser = await signup.findByIdAndUpdate(
+            id, 
+            {
+                $push: {
+                    "data": {
+                        key: hexKey,
+                        indices: newIndicesArray,
+                        encryptedText: modifiedText,
+                        receiverId : receiverId
+                    }
+                }
+            },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
         }
 
         res.json({ encryptedText: modifiedText, newIndex: newIndicesArray});
