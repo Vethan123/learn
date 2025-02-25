@@ -1,4 +1,3 @@
-
 const CryptoJS = require("crypto-js");
 require('dotenv').config();
 
@@ -14,10 +13,5 @@ function encryptText(plaintext, secret) {
   return cipherText.toString();
 }
 
-function encryptKey(){
-  
-}
 
-
-
-module.exports = {encryptText, encryptKey};
+module.exports = {encryptText};
