@@ -8,10 +8,10 @@ router.post("/encrypt-key", async (req, res) => {
     let { senderId, receiverId } = req.body;
 
     try {
-        let aesKey = await signupDetails.findById(senderId, {'data.key' : 1, _id : 0});
+        let aesData = await signupDetails.findById(senderId, {data : 1 , _id : 0});
         let publicKey = await signupDetails.findById(receiverId, {publicKey : 1, _id : 0});
 
-        const aesKeyBase64 = aesKey.data[0].key;
+        const aesKeyBase64 = aesData.data[0].key;
         const publicKeyBase64 = publicKey.publicKey;
 
         let options = {
@@ -25,7 +25,21 @@ router.post("/encrypt-key", async (req, res) => {
         
         const encryptedAesKeyBase64 = results[0];
 
-        res.status(200).json({ encryptedAesKey: encryptedAesKeyBase64 });
+        const encryptedDbFormat = {
+            encryptedText: aesData.data[0].encryptedText,
+            key: encryptedAesKeyBase64,
+            indices: aesData.data[0].indices,
+            receiverId: aesData.data[0].receiverId,
+            createdAt: Date.now(),
+        };
+        
+        const result = await encryptedStore.findOneAndUpdate(
+            { receiverId: aesData.data[0].receiverId },
+            encryptedDbFormat,
+            { upsert: true, new: true }
+        );
+
+        res.status(200).json({ aesData, encryptedAesKey: encryptedAesKeyBase64 });
 
     } catch (error) {
         res.status(400).json({ error: error });

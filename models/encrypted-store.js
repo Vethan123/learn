@@ -10,7 +10,7 @@ const encryptedMessageSchema = new mongoose.Schema({
     required: true
   },
   indices: {
-    type: [Number],  
+    type: [[Number]],  
     required: true
   },
   receiverId: {

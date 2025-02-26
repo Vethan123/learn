@@ -1,12 +1,22 @@
 const express = require("express");
 const router = express.Router();
-
+const encryptedStore = require("../models/encrypted-store")
+const axios = require("axios");
 const {decrypt} = require("../controllers/decrypt");
 
 router.post("/decrypt-text", async (req, res) => {
-    let {encryptedText, newIndex } = req.body;
+    let {receiverId} = req.body;
 
     try {
+        let Details = await encryptedStore.find({receiverId : receiverId});
+        let encryptedText = Details[0].encryptedText;
+        let newIndex = Details[0].indices;
+
+        let decryptedKey = await axios.post('http://localhost:3000/d-key/decrypt-key', {
+                    receiverId: receiverId
+        });
+
+        let key = decryptedKey.data.decryptedAesKeyBase64;
         let modifiedText = encryptedText;
         let indexShift = 0;
 
@@ -18,8 +28,7 @@ router.post("/decrypt-text", async (req, res) => {
 
             let cipherText = modifiedText.slice(start_index, end_index);
 
-            let plainText = decrypt(cipherText);
-            console.log(plainText);
+            let plainText = decrypt(cipherText, key);
 
             modifiedText = modifiedText.slice(0, start_index) + plainText + modifiedText.slice(end_index);
 
@@ -38,4 +47,3 @@ router.post("/decrypt-text", async (req, res) => {
 
 module.exports = router;
 
-// John Doe, born on 12th March 1990, resides at 1234 Elm Street, Springfield, IL, with his wife, Jane Doe, and their two children. His phone number is (555) 123-4567, and his email address is john.doe@email.com. He works as a software engineer at TechCorp, where his employee ID is 789456. John’s bank account number is 9876543210, and he holds an account with Springfield National Bank. His social security number is 123-45-6789.

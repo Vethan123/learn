@@ -5,7 +5,7 @@ const encryptionComponent = require("./routes/encryption");
 const decryptionComponent = require("./routes/decryption");
 const loginComponent = require("./routes/signup-login");
 const encryptKeyComponent = require("./routes/encrypt-key");
-
+const decryptKeyComponent = require("./routes/decrypt-key");
 
 require('dotenv').config();
 const app = express();
@@ -20,7 +20,8 @@ mongoose.connect("mongodb://localhost:27017/")
 app.use("/auth", loginComponent);
 app.use("/encrypt", encryptionComponent);
 app.use("/decrypt", decryptionComponent);
-app.use("/key", encryptKeyComponent);
+app.use("/e-key", encryptKeyComponent);
+app.use("/d-key", decryptKeyComponent);
 
 const port = process.env.PORT||3000;
 app.listen(port, () => {
