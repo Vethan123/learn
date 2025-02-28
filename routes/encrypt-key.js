@@ -3,48 +3,66 @@ const encryptedStore = require("../models/encrypted-store");
 const signupDetails = require("../models/signup");
 const {PythonShell} = require("python-shell");
 
-
 router.post("/encrypt-key", async (req, res) => {
-    let { senderId, receiverId } = req.body;
+    let { senderId, receiverIds } = req.body;
 
     try {
-        let aesData = await signupDetails.findById(senderId, {data : 1 , _id : 0});
-        let publicKey = await signupDetails.findById(receiverId, {publicKey : 1, _id : 0});
+        let senderData = await signupDetails.findById(senderId, { data: 1, _id: 0 });
+        if (!senderData || senderData.data.length === 0) {
+            return res.status(404).json({ error: "Sender data not found" });
+        }
 
-        const aesKeyBase64 = aesData.data[0].key;
-        const publicKeyBase64 = publicKey.publicKey;
+        let aesKeyBase64 = senderData.data[0].key;
+        let encryptedText = senderData.data[0].encryptedText;
+        let indices = senderData.data[0].indices;
 
-        let options = {
-            pythonPath: '/usr/bin/python3',
-            scriptPath : './controllers',
-            args: [aesKeyBase64, publicKeyBase64],
-            pythonOptions: ['-u'],
-        };
-
-        const results = await PythonShell.run('encrypt-key.py', options);
-        
-        const encryptedAesKeyBase64 = results[0];
-
-        const encryptedDbFormat = {
-            encryptedText: aesData.data[0].encryptedText,
-            key: encryptedAesKeyBase64,
-            indices: aesData.data[0].indices,
-            receiverId: aesData.data[0].receiverId,
-            createdAt: Date.now(),
-        };
-        
-        const result = await encryptedStore.findOneAndUpdate(
-            { receiverId: aesData.data[0].receiverId },
-            encryptedDbFormat,
-            { upsert: true, new: true }
+        let receivers = await signupDetails.find(
+            { _id: { $in: receiverIds } }, 
+            { _id: 1, publicKey: 1 }
         );
 
-        res.status(200).json({ aesData, encryptedAesKey: encryptedAesKeyBase64 });
+        if (receivers.length === 0) {
+            return res.status(404).json({ error: "No valid receivers found" });
+        }
+
+        let encryptedReceivers = [];
+
+        for (let receiver of receivers) {
+            let options = {
+                pythonPath: "/usr/bin/python3",
+                scriptPath: "./controllers",
+                args: [aesKeyBase64, receiver.publicKey],
+                pythonOptions: ["-u"],
+            };
+
+            const results = await PythonShell.run("encrypt-key.py", options);
+            const encryptedAesKeyBase64 = results[0];
+
+            encryptedReceivers.push({
+                receiverId: receiver._id,
+                key: encryptedAesKeyBase64,
+            });
+        }
+
+        const encryptedMessage = new encryptedStore({
+            senderId,
+            indices,
+            encryptedText,
+            receivers: encryptedReceivers,
+            createdAt: Date.now(),
+        });
+
+        await encryptedMessage.save();
+
+        res.status(200).json({ message: "Encryption successful", encryptedMessage });
 
     } catch (error) {
-        res.status(400).json({ error: error });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
+
+
 module.exports = router;
 
 

@@ -1,29 +1,35 @@
 const mongoose = require('mongoose');
 
 const encryptedMessageSchema = new mongoose.Schema({
-  encryptedText: {
-    type: String,  
-    required: true
-  },
-  key: {
-    type: String,  
-    required: true
+  senderId : {
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true,
   },
   indices: {
-    type: [[Number]],  
+    type: [[Number]], 
     required: true
   },
-  receiverId: {
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User',  
-    required: true
+  encryptedText: {
+    type: String,
+    required: true 
   },
+  receivers: [{
+    receiverId: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User', 
+      required: true 
+    },
+    key: {
+      type: String, 
+      required: true 
+    },
+  }],
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
-
 
 const EncryptedMessage = mongoose.model('EncryptedMessage', encryptedMessageSchema);
 

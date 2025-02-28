@@ -22,13 +22,13 @@ router.post("/detect-pii", async (req, res) => {
 
     try {
         let result = await PythonShell.run('model.py', options);
-        if (result) {
+        if (result[0]=="No entities detected.") { 
+            res.status(400).json({ success : false, error: "Text contains no PII data" });
+        } else {
             const cleanedString = result[0]
             .replace(/'/g, '"')
             .replace(/\s([a-zA-Z0-9_]+):/g, '"$1":');
             res.status(200).send(JSON.parse(cleanedString));
-        } else {
-            res.status(400).json({ error: "No result from Python script" });
         }
     } catch (error) {
         console.error("Error executing Python script:", error);
@@ -37,12 +37,18 @@ router.post("/detect-pii", async (req, res) => {
 });
 
 router.post("/encrypt-text", async (req, res) => {
-    let {id, receiverId, text} = req.body;
+    let {id, receiverIds, text} = req.body;
 
     try {
         const response = await axios.post('http://localhost:3000/encrypt/detect-pii', {
             text: text
         });
+        const receivers = await signup.find({ '_id': { $in: receiverIds } }, 'publicKey');
+
+        if (!receivers || receivers.length !== receiverIds.length) {
+            return res.status(404).json({ error: 'One or more receivers not found' });
+        }
+
 
         const entityEntries = Object.entries(response.data);
         entityEntries.sort((a, b) => a[1].start_index - b[1].start_index);
@@ -69,6 +75,7 @@ router.post("/encrypt-text", async (req, res) => {
 
             indexShift += cipher_text.length - plain_text.length;
         }
+
         const updatedUser = await signup.findByIdAndUpdate(
             id, 
             {
@@ -77,19 +84,23 @@ router.post("/encrypt-text", async (req, res) => {
                         key: hexKey,
                         indices: newIndicesArray,
                         encryptedText: modifiedText,
-                        receiverId : receiverId
+                        receiverDetails: receivers.map(receiver => ({
+                            receiverId: receiver._id,
+                            reciverPublicKey: receiver.publicKey // Use correct key name
+                        }))
                     }
                 }
             },
             { new: true }
         );
+        
 
         if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
         }
 
         res.json({ encryptedText: modifiedText, newIndex: newIndicesArray});
-
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'An error occurred while processing your request' });
@@ -104,7 +115,6 @@ router.post("/replace-chars", async (req, res) => {
         const response = await axios.post('http://localhost:3000/encrypt/detect-pii', {
             text: text
         });
-
         const entityEntries = Object.entries(response.data);
         entityEntries.sort((a, b) => a[1].start_index - b[1].start_index);
 

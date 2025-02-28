@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { Schema, model } = require('mongoose');
+const mongoose = require("mongoose");
 
 const userSchema = new Schema({
     name: { type: String, required: true },
@@ -10,9 +11,15 @@ const userSchema = new Schema({
     publicKey: { type: String, required: true },
     data: [{
         key: { type: String },
-        indices: { type: [[Number]] },
+        indices: {
+            type: [[Number]],
+            required: true,
+        },
         encryptedText: { type: String },
-        receiverId: { type: String },
+        receiverDetails: [{
+            receiverId : { type: mongoose.Schema.Types.ObjectId },
+            reciverPublicKey : {type : String},
+        }],
     }]
 });
 

@@ -5,21 +5,26 @@ const axios = require("axios");
 const {decrypt} = require("../controllers/decrypt");
 
 router.post("/decrypt-text", async (req, res) => {
-    let {receiverId} = req.body;
+    let { senderId, receiverId } = req.body;
 
     try {
-        let Details = await encryptedStore.find({receiverId : receiverId});
+        let Details = await encryptedStore.find({ senderId: senderId, "receivers.receiverId": receiverId });
+        
+        if (Details.length === 0) {
+            return res.status(404).json({ error: 'Encrypted message not found for these users' });
+        }
+
         let encryptedText = Details[0].encryptedText;
         let newIndex = Details[0].indices;
 
         let decryptedKey = await axios.post('http://localhost:3000/d-key/decrypt-key', {
-                    receiverId: receiverId
+            senderId: senderId,
+            receiverId: receiverId
         });
 
         let key = decryptedKey.data.decryptedAesKeyBase64;
         let modifiedText = encryptedText;
         let indexShift = 0;
-
         for (let i = 0; i < newIndex.length; i++) {
             let [start_index, end_index] = newIndex[i];
 
@@ -30,11 +35,13 @@ router.post("/decrypt-text", async (req, res) => {
 
             let plainText = decrypt(cipherText, key);
 
+            if (!plainText) {
+                return res.status(500).json({ error: 'Decryption failed for part of the message' });
+            }
             modifiedText = modifiedText.slice(0, start_index) + plainText + modifiedText.slice(end_index);
 
             indexShift += plainText.length - cipherText.length;
         }
-
         res.json({ text: modifiedText });
 
     } catch (error) {
@@ -42,6 +49,7 @@ router.post("/decrypt-text", async (req, res) => {
         res.status(500).json({ error: 'An error occurred during decryption' });
     }
 });
+
 
 
 

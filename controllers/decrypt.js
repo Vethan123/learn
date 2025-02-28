@@ -11,13 +11,10 @@ function decrypt(cipherText, secret) {
         padding: CryptoJS.pad.Pkcs7,
     });
 
-    // Attempt to convert decrypted result to UTF-8, or return raw binary if failed
     let decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
 
-    // Check if the decrypted text is valid
     if (!decryptedText) {
-        // Return the result as raw binary if it could not be converted to UTF-8
-        return decrypted.toString(CryptoJS.enc.Base64);  // Or you can return it in hex
+        return decrypted.toString(CryptoJS.enc.Base64);
     }
 
     return decryptedText;

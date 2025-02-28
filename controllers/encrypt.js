@@ -11,7 +11,7 @@ function encryptText(plaintext, secret) {
       padding: CryptoJS.pad.Pkcs7
       });
   return cipherText.toString();
-}
+  }
 
 
-module.exports = {encryptText};
+  module.exports = {encryptText};
